@@ -33,11 +33,8 @@ class SERClassifier(pl.LightningModule):
         # pass through lstm
         lstm_out, (lstm_hidden, lstm_cell) = self.lstm(features_packed)
         # pass last hidden state through linear layers
-        print(lstm_cell[-1].shape)
-        import pdb; pdb.set_trace()
         logits_act = self.linear_act(lstm_cell[-1])
         logits_val = self.linear_val(lstm_cell[-1])
-        # import pdb; pdb.set_trace()
         return logits_act, logits_val
  
  
@@ -86,7 +83,6 @@ class SERClassifier(pl.LightningModule):
             logits_act, logits_val = self(batch["features"].cuda(), feature_lens)
             activations = torch.argmax(F.log_softmax(logits_act, dim=1), dim=1)
             valences = torch.argmax(F.log_softmax(logits_val, dim=1), dim=1)
-            # import pdb; pdb.set_trace()
             for j, (activation, valence) in enumerate(zip(activations, valences)):
                 result[str(i+j)] = {"activation": activation.item(), "valence": valence.item()}
             i += j
