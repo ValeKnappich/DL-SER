@@ -91,14 +91,17 @@ class SERDatamodule(pl.LightningDataModule):
                 if removed >= n_remove:
                     break
 
+        
+        print("Initial distribution:")
+        valence_counts = pd.Series([sample["valence"] for sample in train_json.values()]).value_counts()
+        activation_counts = pd.Series([sample["activation"] for sample in train_json.values()]).value_counts()
+        print((valence_counts[0], valence_counts[1]), (activation_counts[0], activation_counts[1]))
         while True:
             # import pdb; pdb.set_trace()
             valence_counts = pd.Series([sample["valence"] for sample in train_json.values()]).value_counts()
             activation_counts = pd.Series([sample["activation"] for sample in train_json.values()]).value_counts()
-            print((valence_counts[0], valence_counts[1]), (activation_counts[0], activation_counts[1]))
             val_fac = max(valence_counts) / min(valence_counts)
             act_fac = max(activation_counts) / min(activation_counts)
-            print(val_fac, act_fac, "\n")
 
             if val_fac > 1.3 and act_fac > 1.3:
                 remove(lambda sample: sample["valence"] == valence_counts.idxmax() and sample["activation"] == activation_counts.idxmax())
@@ -108,7 +111,10 @@ class SERDatamodule(pl.LightningDataModule):
                 remove(lambda sample: sample["activation"] == activation_counts.idxmax())
             else:
                 break
-            
+        print("Finished balancing:")
+        valence_counts = pd.Series([sample["valence"] for sample in train_json.values()]).value_counts()
+        activation_counts = pd.Series([sample["activation"] for sample in train_json.values()]).value_counts()
+        print((valence_counts[0], valence_counts[1]), (activation_counts[0], activation_counts[1]))
         return train_json
 
 
