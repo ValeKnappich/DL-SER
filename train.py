@@ -6,8 +6,7 @@ dm = SERDatamodule("train.json")
 model = SERClassifier()
 trainer = pl.Trainer(
     max_epochs=3,
-    gpus=1, 
-    progress_bar_refresh_rate=30
+    gpus=1
 )
 trainer.fit(model, dm)
 trainer.save_checkpoint("model.ckpt")

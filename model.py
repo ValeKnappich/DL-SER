@@ -10,9 +10,9 @@ from tqdm import tqdm
 
 
 class SERClassifier(pl.LightningModule):
-    def __init__(self, n_lstm=5, hidden_size=128):
+    def __init__(self, n_lstm=5, hidden_size=512, dropout=0.2):
         super().__init__()
-        self.lstm = nn.LSTM(input_size=26, num_layers=n_lstm, hidden_size=hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(input_size=26, num_layers=n_lstm, hidden_size=hidden_size, batch_first=True, dropout=dropout)
         self.linear_act = nn.Linear(hidden_size, 2)
         self.linear_val = nn.Linear(hidden_size, 2)
     
@@ -24,17 +24,19 @@ class SERClassifier(pl.LightningModule):
     
     
     def configure_optimizers(self):
-        return Adam(self.parameters(), lr=1e-3)
+        return Adam(self.parameters(), lr=1e-5)
  
  
     def forward(self, features, feature_lens):
         # pack padded features, so that lstm can handle variable length
-        features_packed = pack_padded_sequence(features, feature_lens.sort(descending=True).values.cpu(), batch_first=True)
+        features_packed = pack_padded_sequence(features, feature_lens.cpu(), batch_first=True, enforce_sorted=False)
         # pass through lstm
         lstm_out, (lstm_hidden, lstm_cell) = self.lstm(features_packed)
         # pass last hidden state through linear layers
-        logits_act = self.linear_act(lstm_hidden[-1])
-        logits_val = self.linear_val(lstm_hidden[-1])
+        print(lstm_cell[-1].shape)
+        import pdb; pdb.set_trace()
+        logits_act = self.linear_act(lstm_cell[-1])
+        logits_val = self.linear_val(lstm_cell[-1])
         # import pdb; pdb.set_trace()
         return logits_act, logits_val
  
@@ -77,14 +79,15 @@ class SERClassifier(pl.LightningModule):
  
 
     def transform(self, dataloader):
+        self.eval()
         result = {}
         i = 0
         for batch, feature_lens in tqdm(dataloader):  
-            logits_act, logits_val = self(batch["features"].cuda(), torch.Tensor(feature_lens))
+            logits_act, logits_val = self(batch["features"].cuda(), feature_lens)
             activations = torch.argmax(F.log_softmax(logits_act, dim=1), dim=1)
             valences = torch.argmax(F.log_softmax(logits_val, dim=1), dim=1)
             # import pdb; pdb.set_trace()
             for j, (activation, valence) in enumerate(zip(activations, valences)):
-                result[str(i+j)] = {"activation": activation, "valence": valence}
-        i += j
+                result[str(i+j)] = {"activation": activation.item(), "valence": valence.item()}
+            i += j
         return result
